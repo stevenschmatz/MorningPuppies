@@ -6,6 +6,7 @@
 
 import urllib, json, pycurl
 import os, re, sys, smtplib
+import random
 
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
@@ -24,17 +25,15 @@ class EmailSender():
 	# PRIVATE
 	# =======
 
-	def __init__(self, subject, message):
+	def __init__(self, subject):
 		# Authentication information
-		self._sender = 'someGmailAccount@gmail.com'
+		self._sender = 'senderAddress@mail.com'
 		self._password = "yourPassword"
 
 		# Message contents
-		self._recipient = 'some-dude234@gmail.com'
+		self._recipient = 'some-dude723@mail.com'
 		self._subject = subject
-		self._message = message
 		self._initMessage()
-		self._attachMessageText()
 
 	"""
 	MODIFIES: self.msg
@@ -50,9 +49,9 @@ class EmailSender():
 	MODIFIES: self.msg
 	EFFECTS:  Attaches the given text to the email message.
 	"""
-	def _attachMessageText(self):
-		part = MIMEText('text', "plain")
-		part.set_payload(self._message)
+	def _attachMessageText(self, htmlMessage):
+		part = MIMEText('html', "html")
+		part.set_payload(htmlMessage)
 		self.msg.attach(part)
 
 	# ======
@@ -95,10 +94,11 @@ class MorningPuppiesSender(EmailSender):
 	# PRIVATE
 	# =======
 
-	def __init__(self, subject, message):
-		EmailSender.__init__(self, subject, message)
+	def __init__(self, subject):
+		EmailSender.__init__(self, subject)
 		self.cutePictureFilename = ''
 		self.extension = ''
+		self.caption = ''
 
 	"""	
 	REQUIRES: Connection to the internet is good.
@@ -114,6 +114,7 @@ class MorningPuppiesSender(EmailSender):
 
 		# Retrieve picture link and reate filename
 		imgurLink = data["data"]["children"][0]["data"]["url"]
+		self.caption = "<h3>\"" + data["data"]["children"][0]["data"]["title"] + "\"</h3>"
 		self.extension = imgurLink[imgurLink.rfind('.'):]
 		self.cutePictureFilename = "cutePicture" + self.extension
 
@@ -130,18 +131,30 @@ class MorningPuppiesSender(EmailSender):
 		if self.cutePictureFilename != '':
 			os.remove(self.cutePictureFilename)
 
+	def _attachFooterText(self):
+		adjectives = ["good", "great", "spectacular", "magnificent", "splendid", "dazzling", 
+			"sensational", "remarkable", "outstanding", "memorable", "unforgettable"]
+		footer = "Have a " + random.choice(adjectives) + " day!"
+		footerHTML = "<h3 style=\"font-weight: normal; font-style: oblique;\">" + footer + "</h3>"
+		self._attachMessageText(footerHTML)
+
 	# ======
 	# PUBLIC
 	# ======
 
+	"""
+	EFFECTS:  Downloads the picture, and sends an email to the given person.
+	"""
 	def sendEmails(self):
 		self._retrieveDailyPicture()
 		self.attachImage(self.cutePictureFilename)
+		self._attachMessageText(self.caption)
+		self._attachFooterText()
 		self.createSessionAndSend()
 		self._removePicture()
  
 def main():
-	morningPuppiesSender = MorningPuppiesSender("Hello world!", "How are you today?")
+	morningPuppiesSender = MorningPuppiesSender("Rise and Shine!")
 	morningPuppiesSender.sendEmails()
  
 if __name__ == '__main__':
