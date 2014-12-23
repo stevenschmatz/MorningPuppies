@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Steven Schmatz
 # December 10, 2014
@@ -12,9 +12,24 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+# Example SMTP server – gmail.com
 SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 587
-DIRECTORY = "/Your/Directory"
+DIRECTORY = "/Directory/to/save/image/temporarily"
+
+SENDER_EMAIL_ADDRESS = 'xxxxxx@mail.com'
+SENDER_EMAIL_SECRET = "xxxxxx"
+RECIPIENT_ADDRESSES = ["address1@mail.org"]
+
+EMAIL_SENDING_HOUR = 8 # 8:00am
+EMAIL_SUBJECT = "Rise and Shine!"
+
+
+"""
+=================
+class EmailSender
+=================
+"""
 
 class EmailSender():
 	"""	An SMTP email sending client that can send an email with
@@ -27,11 +42,10 @@ class EmailSender():
 
 	def __init__(self, subject):
 		# Authentication information
-		self._sender = 'senderAddress@mail.com'
-		self._password = "yourPassword"
+		self._sender = SENDER_EMAIL_ADDRESS
+		self._password = SENDER_EMAIL_SECRET
 
 		# Message contents
-		self._recipient = 'some-dude723@mail.com'
 		self._subject = subject
 		self._initMessage()
 
@@ -42,7 +56,6 @@ class EmailSender():
 	def _initMessage(self):
 		self.msg = MIMEMultipart()
 		self.msg['Subject'] = self._subject
-		self.msg['To'] = self._recipient
 		self.msg['From'] = self._sender
 
 	"""
@@ -81,9 +94,53 @@ class EmailSender():
 		session.starttls()
 		session.ehlo
 		session.login(self._sender, self._password)
-	 
-		session.sendmail(self._sender, self._recipient, self.msg.as_string())
+
+		for recipient in RECIPIENT_ADDRESSES:
+			self.msg['To'] = recipient
+			session.sendmail(self._sender, recipient, self.msg.as_string())
+
 		session.quit()
+
+"""
+===================
+Class RepeatedTimer
+===================
+"""
+
+from threading import Timer
+import datetime
+import threading
+
+class RepeatedTimer(object):
+    def __init__(self, interval, function, *args, **kwargs):
+        self._timer     = None
+        self.interval   = interval
+        self.function   = function
+        self.args       = args
+        self.kwargs     = kwargs
+        self.is_running = False
+        self.start()
+
+    def _run(self):
+        self.is_running = False
+        self.start()
+        self.function(*self.args, **self.kwargs)
+
+    def start(self):
+        if not self.is_running:
+            self._timer = Timer(self.interval, self._run)
+            self._timer.start()
+            self.is_running = True
+
+    def stop(self):
+        self._timer.cancel()
+        self.is_running = False
+
+"""
+==========================
+Class MorningPuppiesSender
+==========================
+"""
 
 class MorningPuppiesSender(EmailSender):
 	""" MorningPuppies supplies all the methods to send an email of a cute
@@ -152,10 +209,39 @@ class MorningPuppiesSender(EmailSender):
 		self._attachFooterText()
 		self.createSessionAndSend()
 		self._removePicture()
- 
+
+		print "Sent emails!"
+
+	def initDailyEmails(self):
+		SECOND = 1
+		MINUTE = 60 * SECOND
+		HOUR = 60 * MINUTE
+		DAY = 24 * HOUR
+
+		self.sendEmails()
+		rt = RepeatedTimer(DAY, self.sendEmails)
+
+	def initEmailSender(self, email_sending_hour):
+		now = datetime.datetime.now()
+		nextTimeDay = datetime.datetime.now().day
+
+		# Ensures that emails are sent at proper time
+		if now.hour >= email_sending_hour:
+			nextTimeDay += 1
+
+		nextTime = datetime.datetime(now.year, now.month, 23, 17, 43, 0)
+		timeInterval = (nextTime - now).total_seconds()
+		threading.Timer(timeInterval, self.initDailyEmails).start()
+
+"""
+======
+main()
+======
+"""
+
 def main():
-	morningPuppiesSender = MorningPuppiesSender("Rise and Shine!")
-	morningPuppiesSender.sendEmails()
- 
+	morningPuppiesSender = MorningPuppiesSender(EMAIL_SUBJECT)
+	morningPuppiesSender.initEmailSender(EMAIL_SENDING_HOUR)
+
 if __name__ == '__main__':
 	main()
