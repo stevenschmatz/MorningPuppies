@@ -256,8 +256,10 @@ main()
 """
 
 def main():
+    """Runs the Morning Puppies Sender."""
     morning_puppies_sender = MorningPuppiesSender(EMAIL_SUBJECT)
     morning_puppies_sender.init_email_sender(EMAIL_SENDING_HOUR)
 
 if __name__ == '__main__':
     main()
+    
