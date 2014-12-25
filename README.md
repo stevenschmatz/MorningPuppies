@@ -1,4 +1,6 @@
 morningPuppies
 ==============
 
-Automating sending people pictures of puppies every day.
+Merry Christmas ;)
+
+Making the world a better place through daily puppy transportation directly to your inbox.
